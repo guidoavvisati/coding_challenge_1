@@ -8,7 +8,7 @@
 better off defining a (possibly inline) function. This line can cause
 obscure bugs because it enforces literal substitution of the expression in MIN
 before the compiler runs. 
-`int min(int a, int b){(a < b) ? return a : return b}`
+`int min(int a, int b){(a < b) ? return a; : return b;}`
 
 ## Two
 ```
@@ -18,9 +18,9 @@ before the compiler runs.
 ```
 Since x is a pointer to a `int volatile`, we know that the content pointed to by x
 can change at any time. Therefore, we risk to fetch 3 different values by dereferencing
-x. According to me, one can either store the first value `int a = *x; return a*a*a`
+x. According to me, one can either store the first value `int a = *x; return a*a*a;`
 or directly drop the `*` and use the copied value of x 
-`int xto3(volatile int x){return x*x*x};`. This last option does change the signature,
+`int xto3(volatile int x){return x*x*x;}`. This last option does change the signature,
 therefore client code could be affected, so probably the first is a better option.
 
 ## Three
