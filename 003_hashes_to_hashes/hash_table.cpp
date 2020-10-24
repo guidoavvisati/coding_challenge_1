@@ -46,14 +46,25 @@ typedef struct TableManager {
   };
 
   // Hash methods
+  // uint32_t murmur_hash_32(const char *key)
+  // {
+  //   uint32_t hash(3323198485ul);
+  //   for (;*key;++key) {
+  //     hash ^= *key;
+  //     hash *= 0x5bd1e995;
+  //     hash ^= hash >> 15;
+  //   }
+  //   return hash;
+  // }
+
   uint32_t murmur_hash_32(const char *key)
   {
-    uint32_t hash(3323198485ul);
-    for (;*key;++key) {
-      hash ^= *key;
-      hash *= 0x5bd1e995;
-      hash ^= hash >> 15;
-    }
+    unsigned int hash = 0;
+    int c;
+
+    while (c = *key++)
+        hash += c;
+
     return hash;
   }
 
@@ -87,7 +98,7 @@ typedef struct TableManager {
       if(node_to_update != nullptr){ // Case key in linked list, update value
 	node_to_update->update_value(value);
       }
-      else{ // Case new key, pre-pend to list
+      else{ // Case new key, pre-pend to linked list
 	table[idx] = new Node(key, value, head);
 	table_entry_counts++;
       }
@@ -111,7 +122,7 @@ typedef struct TableManager {
       head = table[idx];
       if(head){
 	do{
-	  printf("[%d]: (%s, %s)\n", idx, head->key, head->value);
+	  printf("[%lu]: (%s, %s)\n", idx, head->key, head->value);
 	  head = head->next;
 	} while(head != nullptr);
       }
@@ -125,11 +136,14 @@ typedef struct TableManager {
 
 int main(int argc, char *argv[]){
   
-  TableManager mgr = TableManager(100);
-  Node** table = mgr.table;
-  if(argc > 1) printf("%d\n", mgr.get_hash(argv[1]));
-  mgr.add("123", "ab");
-  mgr.add("123", "mini");
-  print_table();
-  printf("%d\n", mgr.table_entry_counts);
+  TableManager mgr = TableManager(108);
+  if(argc > 1)
+    for(int i = 1; i < argc; ++i)
+      printf("%d\n", mgr.get_hash(argv[i]));
+  // mgr.add("ab", "ab");
+  // mgr.add("ba", "mini");
+  // mgr.print_table();
+  // printf("%d\n", mgr.table_entry_counts);
+
 }
+
