@@ -30,14 +30,14 @@ therefore client code could be affected, so probably the first is a better optio
         return ((uintptr_t)addr) & (uintptr_t)((1<<bits)-1);
     }
 ```
-This function is used for memory alignment purposes. The RHS is a bit mask,
-but for the entire expression to work, we're supposed to bit-negate the mask.
-Moreover, I think it is instead rounding the address down, which may not be
-preferred. I would fix it like so
+This function is used for memory alignment purposes. The RHS is a bit mask
+which is applied on the LFS. I think the main issue here is the casting
+of `int*` to `uintptr_t`, as the a number bit will be interpreted as sign-bit.
+I would fix it like so
 ```
     int *align_to_bits(int *addr, int bits){
-        uintptr_t mask = (uintptr_t)((1<<bits)-1);
-        return ((uintptr_t)addr + mask) & ~mask;
+        int* mask = (int*)((1<<bits)-1);
+        return addr & mask;
     }
 ```
 
