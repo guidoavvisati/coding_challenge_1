@@ -62,28 +62,6 @@ typedef struct TableManager {
     return idx % this->table_size;
   }
 
-  // API
-  bool add(const char *key, const char *value){
-    uint32_t idx = get_hash(key);
-
-    if(table[idx] == nullptr){ // Case no collisions
-      table[idx] = new Node(key, value, nullptr);
-      table_entry_counts++;
-    }
-    else{ // Case with collision
-      Node *node_to_update = search_collision_list_by_key(table[idx], key);
-      if(node_to_update != nullptr){ // Case key in linked list, update value
-	node_to_update->update_value(value);
-      }
-      else{ // Case new key, pre-pend to list
-	table[idx] = new Node(key, value, table[idx]);
-	table_entry_counts++;
-      }
-    }
-
-    return true;
-  }
-
   Node *search_collision_list_by_key(Node *head, const char *key){
     while(head != nullptr){ // loop over list
       if(strcmp(head->key, key) == 0){ // match found, return
@@ -94,6 +72,30 @@ typedef struct TableManager {
     return nullptr; // no match found
   }
 
+
+  // API
+  bool add(const char *key, const char *value){
+    uint32_t idx = get_hash(key);
+    Node *head = table[idx];
+
+    if(head == nullptr){ // Case no collisions
+      table[idx] = new Node(key, value, nullptr);
+      table_entry_counts++;
+    }
+    else{ // Case with collision
+      Node *node_to_update = search_collision_list_by_key(head, key);
+      if(node_to_update != nullptr){ // Case key in linked list, update value
+	node_to_update->update_value(value);
+      }
+      else{ // Case new key, pre-pend to list
+	table[idx] = new Node(key, value, head);
+	table_entry_counts++;
+      }
+    }
+    return true;
+  }
+
+
   Node *find(const char *key){
     
     return NULL;
@@ -103,6 +105,19 @@ typedef struct TableManager {
     return 1;
   }
 
+  void print_table(void){
+    Node *head;
+    for(size_t idx = 0; idx < table_size; ++idx){
+      head = table[idx];
+      if(head){
+	do{
+	  printf("[%d]: (%s, %s)\n", idx, head->key, head->value);
+	  head = head->next;
+	} while(head != nullptr);
+      }
+    }
+  }
+  
   
 } TableManager;
 
@@ -115,5 +130,6 @@ int main(int argc, char *argv[]){
   if(argc > 1) printf("%d\n", mgr.get_hash(argv[1]));
   mgr.add("123", "ab");
   mgr.add("123", "mini");
+  print_table();
   printf("%d\n", mgr.table_entry_counts);
 }
