@@ -23,6 +23,13 @@ typedef struct Node {
     strcpy(key, _key);
     strcpy(value, _value);
   };
+
+  bool update_value(const char *_value){
+    if(value) delete[] value;
+    value = new char[strlen(_value)];
+    strcpy(value, _value);
+    return true;
+  }
   
 
 } Node;
@@ -57,17 +64,34 @@ typedef struct TableManager {
 
   // API
   bool add(const char *key, const char *value){
-    table_entry_counts++;
     uint32_t idx = get_hash(key);
 
     if(table[idx] == nullptr){ // Case no collisions
       table[idx] = new Node(key, value, nullptr);
+      table_entry_counts++;
     }
-    else{ // Case with collision, prepend new to list
-      table[idx] = new Node(key, value, table[idx]);
+    else{ // Case with collision
+      Node *node_to_update = search_collision_list_by_key(table[idx], key);
+      if(node_to_update != nullptr){ // Case key in linked list, update value
+	node_to_update->update_value(value);
+      }
+      else{ // Case new key, pre-pend to list
+	table[idx] = new Node(key, value, table[idx]);
+	table_entry_counts++;
+      }
     }
 
     return true;
+  }
+
+  Node *search_collision_list_by_key(Node *head, const char *key){
+    while(head != nullptr){ // loop over list
+      if(strcmp(head->key, key) == 0){ // match found, return
+	return head;
+      }
+      head = head->next;
+    }
+    return nullptr; // no match found
   }
 
   Node *find(const char *key){
