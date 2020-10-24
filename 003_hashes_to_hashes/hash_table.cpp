@@ -5,34 +5,50 @@
 
 #define TABLE_LEN 1024
 
+// Node struct for linked list
 typedef struct Node {
-    struct Node* _next;
-    char*  _key;
-    char* _value;
-    int _len_key;
-    int _len_value;
-    
-    Node() :
-        _key(nullptr), _len_key(0), 
-        _value(nullptr), _len_value(0),
-        _next(nullptr) {};
+  struct Node* next;
+  char*  key;
+  char* value;
 
+  Node() :
+    next(nullptr), key(nullptr), value(nullptr){};
 } Node;
 
-typedef struct HashTable {
-    node* _table;
-    size_t _table_size;
-    
-    HashTable(size_t size=TABLE_LEN) : _table(nullptr), _table_size(size) {
-        _table = new node[_table_size]();
-        for (size_t i = 0; i < _table_size; i++){
-            _table[i] = new Node();
-        }
-    };
-} HashTable;
+// Hash Table setup, array of pointers
+typedef struct TableManager {
+  Node** table;
+  size_t table_size;
+
+  TableManager(size_t table_size=TABLE_LEN) : table_size(table_size), table(nullptr) {
+    table = new Node*[table_size];
+    for (size_t i = 0; i < table_size; ++i) {
+      table[i] = new Node();
+    }
+  };
+
+  // Hash methods
+  uint32_t murmur_hash_32(const char* key)
+  {
+    uint32_t hash(3323198485ul);
+    for (;*key;++key) {
+      hash ^= *key;
+      hash *= 0x5bd1e995;
+      hash ^= hash >> 15;
+    }
+    return hash;
+  }
+
+  uint32_t get_hash(const char* key){
+    uint32_t idx = murmur_hash_32(key);
+    return idx % this->table_size;
+  }
+} TableManager;
+
 
 
 int main(){
-    auto table = HashTable(100);
-
+  TableManager mgr = TableManager(100);
+  Node** table = mgr.table;
+  printf("%s\n", table[0]->key);
 }
