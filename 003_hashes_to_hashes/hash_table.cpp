@@ -34,19 +34,21 @@ typedef struct Node {
 
 } Node;
 
-// Hash Table setup, array of references
+// Hash Table setup, array of pointers
 typedef struct TableManager {
   Node **table;
   size_t table_size;
   uint32_t table_entry_counts;
+  uint32_t (*hash_func)(const char *key);
 
   TableManager(size_t table_size=TABLE_LEN) :
-    table_size(table_size), table(nullptr), table_entry_counts(0) {
+    table_size(table_size), table(nullptr), table_entry_counts(0),
+    hash_func(&bad_hash_32) {
     table = new Node * [table_size]();
   };
 
   // Hash methods
-  uint32_t murmur_hash_32(const char *key)
+  static uint32_t murmur_hash_32(const char *key)
   {
     uint32_t hash(3323198485ul);
     for (;*key;++key) {
@@ -57,19 +59,20 @@ typedef struct TableManager {
     return hash;
   }
 
-  // uint32_t _bad_hash_32(const char *key){
-  //   unsigned int hash = 0;
-  //   int c;
-  //   while (c = *key++)
-  //     hash += c;
-  //   return hash;
-  // }
+  static uint32_t bad_hash_32(const char *key){
+    unsigned int hash = 0;
+    int c;
+    while (c = *key++)
+      hash += c;
+    return hash;
+  }
   
   uint32_t get_hash(const char *key){
-    uint32_t idx = murmur_hash_32(key);
+    uint32_t idx = hash_func(key);
     return idx % this->table_size;
   }
 
+  // Case insensitive key search
   Node *search_list_by_key(Node *head, const char *key){
     while(head != nullptr){ // loop over list
       if(strcmp(head->key, key) == 0){ // match found, return
@@ -143,23 +146,24 @@ typedef struct TableManager {
 
 int main(int argc, char *argv[]){
 
-  /* Also pair with _bad_hash_32
-  TableManager mgr = TableManager(108);
-  if(argc > 1)
-    for(int i = 1; i < argc; ++i)
-      printf("%d\n", mgr.get_hash(argv[i]));
+  if(true){
+    // Also pair with _bad_hash_32
+    TableManager mgr = TableManager(108);
+    if(argc > 1)
+      for(int i = 1; i < argc; ++i)
+	printf("%d\n", mgr.get_hash(argv[i]));
 
-  mgr.add("ab", "ab");
-  mgr.add("ba", "mini");
-  mgr.print_table();
-  */
+    mgr.add("ab", "ab");
+    mgr.add("ba", "mini");
+    mgr.print_table();
+  }
 
-  TableManager mgr = TableManager(108);
-  mgr.add("abcde", "123.6");
-  mgr.add("My stuff", "abcde");
-  mgr.print_table();
-  mgr.find("abcde");
-  mgr.find("ABCDE");
+  // TableManager mgr = TableManager(108);
+  // mgr.add("abcde", "123.6");
+  // mgr.add("My stuff", "abcde");
+  // mgr.print_table();
+  // mgr.find("abcde");
+  // mgr.find("ABCDE");
 
 }
 
