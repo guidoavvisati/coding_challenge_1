@@ -4,8 +4,6 @@
 #include <cstdint>
 #include <unistd.h>
 
-# define MAX_MEMORY 32768
-
 typedef struct header_t {
   header_t *next;
   size_t size;
@@ -32,6 +30,9 @@ header_t *get_free_block(size_t size) {
 }
 
 void *custom_malloc(size_t size){
+  // Caveat of this method: no merging of
+  // contiguous freed blocks, so in the end
+  // it will cause more segmentation
   size_t total_size;
   void *block;
   header_t *header;
@@ -57,16 +58,17 @@ void *custom_malloc(size_t size){
     head = header;
   if (tail)
     tail->next = header;
-  tail = header;
   return (void*)(header + 1);
 }
 
-int main(int argc, char *argv[]){
-  char* my_str1 = (char*)custom_malloc(7);
-  strncpy(my_str1, "Hello ", 7);
-  char* my_str2 = (char*)custom_malloc(7);
-  strncpy(my_str2, "Hello ", 7);
-  printf("%s %s\n", my_str1, my_str2);
 
+int main(int argc, char *argv[]){
+  int *i = (int *)custom_malloc(1);
+  *i = 5;
+  printf("%d\n", *i);
+  char *str = (char *)custom_malloc(1);
+  strncpy(str, "MALLOC", 8);
+  printf("%s\n", str);
+  
 }
 
