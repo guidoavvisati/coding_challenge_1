@@ -67,27 +67,43 @@ typedef struct Node {
 } Node;
 
 // Hash Table setup, array of pointers.
-// Could also use std::vector<Node *> container to have
-// a built-in resizing mechanism
+// Could also use std::vector<Node *> container
+// to have a built-in resizing mechanism
 typedef struct HashTable{
   Node **table;
   size_t table_size;
   uint32_t table_entry_counts;
-  uint32_t (*hash_func)(const char *key);
+  uint32_t (*hash_func)(const char *key); // Pointer to hash method
 
   // Constructor with memory allocation
+  // Default settings for table size and hash method
   HashTable(size_t table_size=TABLE_LEN, uint32_t (*hash_func)(const char *key)=&murmur_hash_32) :
     table_size(table_size),
     table(nullptr),
     table_entry_counts(0),
     hash_func(hash_func)
   {
+    printf("New Hash Table created:\n");
     table = new Node * [table_size]();
   };
 
   // Destructor with memory deallocation
   ~HashTable(){
-    printf("Freeing Table\n");
+    printf("Freeing Hash Table:\n");
+    printf("     1. Lists:\n");
+    Node *entry;
+    for(size_t idx = 0; idx < table_size; ++idx){
+      entry = table[idx];
+      if(entry){
+	do {
+	  Node *next = entry->next;
+	  delete entry; // free node
+	  entry = next;
+	} while(entry != nullptr);
+      }
+    }
+    
+    printf("     2. Array\n");
     if(table){
       delete[] table;
       table = nullptr;
@@ -109,7 +125,7 @@ typedef struct HashTable{
     }
   }
 
-  // Utility method: print table
+  // Utility method: print search match
   static void print_match(Node *match, const char *key){
     if(match){
       printf("Match found for [%s] with:\n", key);
@@ -225,8 +241,10 @@ typedef struct HashTable{
 
 
 int main(int argc, char *argv[]){
+  // Pass CLI argument COLLISIONS to investigate
+  // the collision handling
   bool collisions = false;
-  if(argc > 1){ // Pass CLI argument COLLISIONS
+  if(argc > 1){ 
     if(strcmp(argv[1], "COLLISIONS") == 0)
       collisions = true;
   }
@@ -238,7 +256,9 @@ int main(int argc, char *argv[]){
     ht.print();
   }
 
-  HashTable ht = HashTable(108);
+  // With no COLLISIONS argument, use default settings
+  // and a good hashing method
+  HashTable ht = HashTable();
   ht.add("abcde", "123.6");
   ht.add("My stuff", "abcde");
   ht.add("Guido", "3572");
