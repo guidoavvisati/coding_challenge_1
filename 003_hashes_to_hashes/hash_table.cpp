@@ -13,43 +13,63 @@ typedef struct Node {
 
   // Initialize with NULL
   Node() :
-    next(nullptr), key(nullptr), value(nullptr) {};
-
+    next(nullptr),
+    key(nullptr),
+    value(nullptr)
+  {};
+  
   // Initialize memory, pass refs, copy values
   Node(const char *_key, const char *_value, Node *_next) :
-    next(_next), key(nullptr), value(nullptr) {
+    next(_next),
+    key(nullptr),
+    value(nullptr)
+  {
     key = new char[strlen(_key)];
     value = new char[strlen(_value)];
     strcpy(key, _key);
     strcpy(value, _value);
   };
 
+  // In case of same key, update value
   bool update_value(const char *_value){
     if(value) delete[] value;
     value = new char[strlen(_value)];
     strcpy(value, _value);
     return true;
   }
-  
+
+  // Case insensitive key search, static to serve as util
+  static Node *search_list_by_key(Node *head, const char *key){
+    while(head != nullptr){ // loop over list
+      if(strcmp(head->key, key) == 0){ // match found, return
+	return head;
+      }
+      head = head->next;
+    }
+    return nullptr; // no match found
+  }
 
 } Node;
 
 // Hash Table setup, array of pointers
-typedef struct TableManager {
+typedef struct HashTable{
   Node **table;
   size_t table_size;
   uint32_t table_entry_counts;
   uint32_t (*hash_func)(const char *key);
 
-  TableManager(size_t table_size=TABLE_LEN) :
-    table_size(table_size), table(nullptr), table_entry_counts(0),
-    hash_func(&bad_hash_32) {
+  HashTable(size_t table_size=TABLE_LEN, uint32_t (*hash_func)(const char *key)=&murmur_hash_32) :
+    table_size(table_size),
+    table(nullptr),
+    table_entry_counts(0),
+    hash_func(hash_func)
+  {
     table = new Node * [table_size]();
   };
 
   // Hash methods
-  static uint32_t murmur_hash_32(const char *key)
-  {
+  // TODO[GA]: Abstract to different class
+  static uint32_t murmur_hash_32(const char *key){
     uint32_t hash(3323198485ul);
     for (;*key;++key) {
       hash ^= *key;
@@ -70,17 +90,6 @@ typedef struct TableManager {
   uint32_t get_hash(const char *key){
     uint32_t idx = hash_func(key);
     return idx % this->table_size;
-  }
-
-  // Case insensitive key search
-  Node *search_list_by_key(Node *head, const char *key){
-    while(head != nullptr){ // loop over list
-      if(strcmp(head->key, key) == 0){ // match found, return
-	return head;
-      }
-      head = head->next;
-    }
-    return nullptr; // no match found
   }
 
   void print_table(void){
@@ -107,7 +116,7 @@ typedef struct TableManager {
       table_entry_counts++;
     }
     else{ // Case with collision
-      Node *node_to_update = search_list_by_key(head, key);
+      Node *node_to_update = Node::search_list_by_key(head, key);
       if(node_to_update != nullptr){ // Case key in linked list, update value
 	node_to_update->update_value(value);
 	printf("collision, same key\n");
@@ -124,7 +133,7 @@ typedef struct TableManager {
 
   Node *find(const char *key){
     uint32_t idx = get_hash(key);
-    Node *match = search_list_by_key(table[idx], key);
+    Node *match = Node::search_list_by_key(table[idx], key);
     if(match){
       printf("Match found for [%s] with:\n", key);
       printf("    key: %s\n", match->key);
@@ -140,15 +149,15 @@ typedef struct TableManager {
     return 1;
   }
 
-} TableManager;
+} HashTable;
 
 
 
 int main(int argc, char *argv[]){
 
   if(true){
-    // Also pair with _bad_hash_32
-    TableManager mgr = TableManager(108);
+    // Also pair with bad_hash_32
+    HashTable mgr = HashTable(108, &HashTable::bad_hash_32);
     if(argc > 1)
       for(int i = 1; i < argc; ++i)
 	printf("%d\n", mgr.get_hash(argv[i]));
@@ -158,7 +167,7 @@ int main(int argc, char *argv[]){
     mgr.print_table();
   }
 
-  // TableManager mgr = TableManager(108);
+  // HashTable mgr = HashTable(108);
   // mgr.add("abcde", "123.6");
   // mgr.add("My stuff", "abcde");
   // mgr.print_table();
