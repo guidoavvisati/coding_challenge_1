@@ -30,6 +30,21 @@ typedef struct Node {
     strcpy(value, _value);
   };
 
+  // Free resources of single node
+  ~Node()
+  {
+    printf("Freeing Node (%s, %s)\n", key, value);
+    if(key){
+      delete[] key;
+      key = nullptr;
+    }
+    if(value){
+      delete[] value;
+      value = nullptr;
+    }
+    next = nullptr;    
+  }
+
   // In case of same key, update value
   bool update_value(const char *_value){
     if(value) delete[] value;
@@ -38,7 +53,7 @@ typedef struct Node {
     return true;
   }
 
-  // Case insensitive key search, static to serve as util
+  // Case sensitive key search, static to serve as util
   static Node *search_list_by_key(Node *head, const char *key){
     while(head != nullptr){ // loop over list
       if(strcmp(head->key, key) == 0){ // match found, return
@@ -51,13 +66,16 @@ typedef struct Node {
 
 } Node;
 
-// Hash Table setup, array of pointers
+// Hash Table setup, array of pointers.
+// Could also use std::vector<Node *> container to have
+// a built-in resizing mechanism
 typedef struct HashTable{
   Node **table;
   size_t table_size;
   uint32_t table_entry_counts;
   uint32_t (*hash_func)(const char *key);
 
+  // Constructor with memory allocation
   HashTable(size_t table_size=TABLE_LEN, uint32_t (*hash_func)(const char *key)=&murmur_hash_32) :
     table_size(table_size),
     table(nullptr),
@@ -67,8 +85,49 @@ typedef struct HashTable{
     table = new Node * [table_size]();
   };
 
+  // Destructor with memory deallocation
+  ~HashTable(){
+    printf("Freeing Table\n");
+    if(table){
+      delete[] table;
+      table = nullptr;
+    }
+  }
+
+  // Utility method: print table
+  void print(void){
+    Node *head;
+    printf("Number of total items in the table: %d\n", table_entry_counts);
+    for(size_t idx = 0; idx < table_size; ++idx){
+      head = table[idx];
+      if(head){
+	do {
+	  printf("[%lu]: (%s, %s)\n", idx, head->key, head->value);
+	  head = head->next;
+	} while(head != nullptr);
+      }
+    }
+  }
+
+  // Utility method: print table
+  static void print_match(Node *match, const char *key){
+    if(match){
+      printf("Match found for [%s] with:\n", key);
+      printf("    key: %s\n", match->key);
+      printf("    val: %s\n", match->value);
+    }
+    else
+      printf("Match not found for key: [%s]\n", key);      
+  }
+
+  // Utility method: get_hash
+  uint32_t get_hash(const char *key){
+    uint32_t idx = hash_func(key);
+    return idx % table_size;
+  }
+  
   // Hash methods
-  // TODO[GA]: Abstract to different class
+  // TODO[GA]: Abstract *hash_32 methods to different class
   static uint32_t murmur_hash_32(const char *key){
     uint32_t hash(3323198485ul);
     for (;*key;++key) {
@@ -86,27 +145,9 @@ typedef struct HashTable{
       hash += c;
     return hash;
   }
-  
-  uint32_t get_hash(const char *key){
-    uint32_t idx = hash_func(key);
-    return idx % this->table_size;
-  }
 
-  void print_table(void){
-    Node *head;
-    printf("Number of total items in the table: %d\n", table_entry_counts);
-    for(size_t idx = 0; idx < table_size; ++idx){
-      head = table[idx];
-      if(head){
-	do {
-	  printf("[%lu]: (%s, %s)\n", idx, head->key, head->value);
-	  head = head->next;
-	} while(head != nullptr);
-      }
-    }
-  }
-
-  // API
+  // API DEFINITION
+  // Adds key, value pair to the hash table
   bool add(const char *key, const char *value){
     uint32_t idx = get_hash(key);
     Node *head = table[idx];
@@ -114,6 +155,7 @@ typedef struct HashTable{
     if(head == nullptr){ // Case no collisions
       table[idx] = new Node(key, value, nullptr);
       table_entry_counts++;
+      return true;
     }
     else{ // Case with collision
       Node *node_to_update = Node::search_list_by_key(head, key);
@@ -126,27 +168,56 @@ typedef struct HashTable{
 	table[idx] = new Node(key, value, head);
 	table_entry_counts++;
       }
+      return true;
     }
-    return true;
+    return false;
   }
 
-
-  Node *find(const char *key){
+  // Finds node given key
+  Node *find_node(const char *key) {
     uint32_t idx = get_hash(key);
     Node *match = Node::search_list_by_key(table[idx], key);
-    if(match){
-      printf("Match found for [%s] with:\n", key);
-      printf("    key: %s\n", match->key);
-      printf("    val: %s\n", match->value);
-    }
-    else{
-      printf("Match found for key: [%s]\n", key);
-    }
-    return match;
+    print_match(match, key);
+    return match; // Either null or match
   }
 
-  bool remove(Node *node){
-    return 1;
+  // Finds value given key
+  const char *find_value(const char *key){
+    Node *match = find_node(key);
+    if(match) return match->value;
+    else return nullptr;
+  }
+
+  // Remove key, value pair from the table
+  bool remove(const char *key){
+    // Set-up table search
+    uint32_t idx = get_hash(key);
+    Node *prev = nullptr;
+    Node *entry = table[idx];
+
+    // Iterate list to find match and prev node.
+    // Doubly linked list also possible, but more memory per node
+    while (entry != nullptr && strcmp(entry->key, key) != 0) {
+      prev = entry;
+      entry = entry->next;
+    }
+
+    // Handle search result
+    if(entry == nullptr) { // key not found
+      printf("Match not found for key: [%s]\n", key);      
+      return false;
+    }
+    else {
+      if (prev == nullptr) { // Remove first of the list
+	table[idx] = entry->next;
+      }
+      else { // Link prev node with entry->next
+	prev->next = entry->next;
+      }
+      delete entry; // Destructor called, memory freed
+      table_entry_counts--;
+      return true;
+    }
   }
 
 } HashTable;
@@ -154,25 +225,28 @@ typedef struct HashTable{
 
 
 int main(int argc, char *argv[]){
-
-  if(true){
-    // Also pair with bad_hash_32
-    HashTable mgr = HashTable(108, &HashTable::bad_hash_32);
-    if(argc > 1)
-      for(int i = 1; i < argc; ++i)
-	printf("%d\n", mgr.get_hash(argv[i]));
-
-    mgr.add("ab", "ab");
-    mgr.add("ba", "mini");
-    mgr.print_table();
+  bool collisions = false;
+  if(argc > 1){ // Pass CLI argument COLLISIONS
+    if(strcmp(argv[1], "COLLISIONS") == 0)
+      collisions = true;
+  }
+  if(collisions){
+    // Triggering collisions via a bad hashing method
+    HashTable ht = HashTable(108, &HashTable::bad_hash_32);
+    ht.add("ab", "ab");
+    ht.add("ba", "mini");
+    ht.print();
   }
 
-  // HashTable mgr = HashTable(108);
-  // mgr.add("abcde", "123.6");
-  // mgr.add("My stuff", "abcde");
-  // mgr.print_table();
-  // mgr.find("abcde");
-  // mgr.find("ABCDE");
-
+  HashTable ht = HashTable(108);
+  ht.add("abcde", "123.6");
+  ht.add("My stuff", "abcde");
+  ht.add("Guido", "3572");
+  ht.print();
+  printf("%s\n", ht.find_value("abcde"));
+  ht.find_value("ABCDE");
+  Node *match = ht.find_node("My stuff");
+  ht.remove("My stuff");
+  ht.print();
 }
 
